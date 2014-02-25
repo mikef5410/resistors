@@ -1,0 +1,145 @@
+#!/usr/bin/perl
+#
+
+use Text::CSV;
+use Data::Dumper;
+
+
+my %allitemsByTPN=();
+my @tpns=();
+my @fields=();
+
+while ($file=shift(@ARGV)) {
+  parseFile($file);
+}
+
+#Pick out all smt parts with preferred or acceptable rec.
+foreach my $key (keys(%allitemsByTPN)) {
+  if ($allitemsByTPN{$key}{DESIGN_RECOMMENDATION}=~/^(1|2)/) {
+    #if ($allitemsByTPN{$key}{JEDEC_TYPE}=~/^S/) {
+    if ($allitemsByTPN{$key}{JEDEC_TYPE}=~/^S0603/) {
+      my $value=$allitemsByTPN{$key}{VALUE};
+      my $package=$allitemsByTPN{$key}{JEDEC_TYPE};
+      my $tol=$allitemsByTPN{$key}{TOLERANCE};
+      my $rating=$allitemsByTPN{$key}{RATING};
+      my $pn=$allitemsByTPN{$key}{PART_NUMBER};
+
+      #printf("%s|%s|%s|%s|%s\n",$value,$package,$tol,$rating,$pn);
+      push(@vals,$value);
+    }
+  }
+}
+
+@vals=sort byval @vals;
+
+my $lastval=-1;
+my @uniq=();
+foreach my $v (@vals) {
+  if ($v != $lastval) {
+    push(@uniq,$v);
+    $lastval=$v;
+  }
+}
+
+
+print(join("\n",@uniq));
+
+#print Data::Dumper::Dumper(%allitemsByTPN);
+
+exit;
+
+sub byval {
+  $ax=numeric($a);
+  $bx=numeric($b);
+  return($ax <=> $bx);
+}
+
+sub numeric {
+  my $x=shift;
+
+  if ($x=~/M\s*$/) {
+    my $ix=index($x,"M");
+    $x=substr($x,0,$ix);
+    return($x*1000000);
+  }
+  if ($x=~/K\s*$/) {
+    my $ix=index($x,"K");
+    $x=substr($x,0,$ix);
+    return($x*1000);
+  }
+
+  return($x+0);
+}
+
+sub parseFile {
+  my $file=shift;
+
+  open(FIN,"$file");
+
+  my $haveProto=0;
+  my $csv=Text::CSV->new({quote_char=>"'",sep_char=>',',allow_whitespace=>1});
+  my @fields=();
+  while(<FIN>) {
+    chomp;
+    s/\{.*\}//g;
+    s/^\s*//g;
+    s/\s*$//g;
+    next if (/^\s*$/);
+    if ($haveProto) {
+      digestLine($csv,$_);
+      next;
+    }
+    if (/^:/) {
+      $haveProto=learnProto($csv,$_);
+      next;
+    }
+    last if (/^END/);
+  }
+
+  close(FIN);
+}
+
+
+sub learnProto {
+  my $csv=shift;
+  my $line=shift;
+
+  $line=~s/^://;
+  $line=~s/;$//;
+  $line=~s/=/,/g;
+  $line=~s/\|/,/g;
+
+  my $status=$csv->parse($line);
+  @fields=$csv->fields();
+
+  #print join("|",@fields),"\n";
+  return(1);
+}
+
+sub digestLine {
+  my $csv=shift;
+  my $line=shift;
+
+  $line=~s/=/,/g;
+  $line=~s/\|/,/g;
+  $line=~s/''//g;
+  $line=~s/\(!\)//g;
+  my $status=$csv->parse($line);
+  my @vals=$csv->fields();
+
+  my $item={};
+  foreach my $field (@fields) {
+    $item->{$field}=shift(@vals);
+  }
+
+  my $TPN=$item->{TPN};
+  foreach my $key (keys(%$item)) {
+    next if ($key eq 'TPN');
+    $allitemsByTPN{$TPN}{$key}=$item->{$key};
+  }
+
+  #print("==============>$line\n");
+  #print join("|",@vals),"\n";
+
+}
+

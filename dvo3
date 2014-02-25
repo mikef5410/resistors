@@ -1,0 +1,292 @@
+#!/usr/bin/perl
+#
+# brain-dead discrete value optimization (exhaustive search)
+#
+my @rvals=();
+while(<DATA>) {
+  push(@rvals,numeric($_));
+}
+my $nvals=$#rvals;
+
+#Find best solution to 
+#  .6=5.0 * R1/(R2+R1)
+#  
+#  For resistive divider
+my @iters=();
+for ($R1ix=0; $R1ix<$nvals; $R1ix++) {
+#  for ($RVix=0; $RVix<$nvals; $RVix++) {
+    for ($R2ix=0; $R2ix<$nvals; $R2ix++) {
+      my $R1=$rvals[$R1ix];
+      #my $RV=$rvals[$RVix];
+      #my $Rtop=$rvals[$R1ix]+$rvals[$RVix];
+      my $R2=$rvals[$R2ix];
+      next if ($R2+$R1 == 0);
+      next if ($R1+$R2 < 5000);
+      next if ($R1+$R2 > 500000);
+      my $v = 5.0 * $R1/($R2+$R1);
+      my $err= (0.6 - $v)**2;
+      next if ($err > 1.0);
+      push(@iters,[$err, $v, $R1, $RV, $R2]);
+    }
+#  }
+}
+
+my @iters=sort byerr @iters;
+for (my $j=0; $j<200; $j++) {
+  printf("Error: %g, Voltage: %g, R1: %g, RV: %g, R2:%g\n",
+         $iters[$j]->[0], $iters[$j]->[1], $iters[$j]->[2],
+         $iters[$j]->[3], $iters[$j]->[4]);
+}
+
+sub byerr {
+  my $err1=$a->[0];
+  my $err2=$b->[0];
+  return($err1 <=> $err2);
+}
+
+sub numeric {
+  my $x=shift;
+
+  if ($x=~/M\s*$/) {
+    my $ix=index($x,"M");
+    $x=substr($x,0,$ix);
+    return($x*1000000);
+  }
+  if ($x=~/K\s*$/) {
+    my $ix=index($x,"K");
+    $x=substr($x,0,$ix);
+    return($x*1000);
+  }
+
+  return($x+0);
+}
+
+# 0603 Values at TEK
+__DATA__
+0
+0.15
+0.510
+1
+1.47
+1.69
+1.74
+1.91
+2.70
+3.3
+3.57
+4.70
+4.75
+4.99
+6.81
+8.25
+10
+11.5
+12.1
+13
+15
+15.8
+18.2
+22.1
+24.3
+24.9
+26.1
+27.4
+30.10
+31.6
+33.2
+37.4
+39.2
+40.2
+43.2
+45.3
+47.5
+49.9
+50
+51.10
+53.6
+56.2
+60.40
+61.9
+68.1
+71.50
+75
+82.5
+86.6
+90.9
+93.1
+95.3
+100
+110
+113
+121
+130
+143
+150
+162
+165
+178
+182
+200
+221
+237
+249
+274
+287
+301
+332
+357
+365
+374
+392
+432
+453
+475
+499
+511
+562
+619
+620
+681
+715
+732
+750
+825
+866
+887
+909
+1K
+1.07K
+1.15K
+1.21K
+1.24K
+1.33K
+1.40K
+1.43K
+1.50K
+1.54K
+1.58K
+1.62K
+1.65K
+1.69K
+1.82K
+2K
+2.10K
+2.15K
+2.21K
+2.26K
+2.37K
+2.43K
+2.49K
+2.55K
+2.61K
+2.74K
+2.80K
+3.01K
+3.09K
+3.16K
+3.32K
+3.48K
+3.57K
+3.65K
+3.74K
+3.92K
+4.12K
+4.22K
+4.32K
+4.42K
+4.53K
+4.75K
+4.87K
+4.99K
+5.11K
+5.23K
+5.49K
+5.62K
+6.04K
+6.34K
+6.81K
+7.50K
+8.06K
+8.25K
+8.87K
+9.090K
+9.31K
+9.76K
+10K
+10.2K
+10.5K
+10.7K
+11K
+11.3K
+12K
+12.1K
+13K
+13.3K
+13.7K
+14.3K
+15K
+16.2K
+16.9K
+18.2K
+20K
+21.8K
+22.1K
+23.2K
+23.7K
+24.3K
+24.9K
+26.1K
+27K
+27.4K
+30.1K
+30.90K
+33.2K
+35.7K
+36.5K
+37.4K
+39.2K
+40.2K
+46.4K
+47.5K
+49.9K
+51.1K
+52.3K
+56.2K
+60.4K
+66.5K
+68.1K
+71.5K
+80.6K
+82.5K
+86.6K
+100K
+102K
+110K
+118K
+120K
+121K
+150K
+165K
+174K
+196K
+200K
+221K
+240K
+255K
+267K
+332K
+365K
+390K
+402K
+475K
+487K
+562K
+681K
+750K
+768K
+825K
+909K
+953K
+1M
+2.20M
+10M
